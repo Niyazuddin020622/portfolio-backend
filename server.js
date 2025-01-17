@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // Make sure the body parser is configured correctly
 
 // MongoDB Connection
 mongoose
@@ -27,8 +27,8 @@ const contactSchema = new mongoose.Schema({
 
 const Contact = mongoose.model('contacts', contactSchema);
 
-// API Route to handle form submission
-app.post('/api/contact', async (req, res) => {
+// API Route to handle form submission (root endpoint)
+app.post('/', async (req, res) => {
   const { name, email, message } = req.body;
 
   if (!name || !email || !message) {
