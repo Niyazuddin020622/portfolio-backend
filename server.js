@@ -1,56 +1,53 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import bodyParser from 'body-parser';
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import nodemailer from "nodemailer";
+
+dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(cors({ origin: '*' }));
-app.use(bodyParser.json()); // Make sure the body parser is configured correctly
+app.use(cors({ origin: ["http://localhost:5173", "https://personal-portfolio06.netlify.app/"] }));
+app.use(bodyParser.json());
 
-// MongoDB Connection
-mongoose
-  .connect('mongodb://localhost:27017/contactDB', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('MongoDB connected...'))
-  .catch((err) => console.log(err));
-
-// Define Contact Schema and Model
-const contactSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  message: { type: String, required: true },
+// Nodemailer Transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // Your email
+    pass: process.env.EMAIL_PASS, // Your email app password
+  },
 });
 
-const Contact = mongoose.model('contacts', contactSchema);
-
-// API Route to handle form submission (root endpoint)
-app.post('/', async (req, res) => {
+// API Route to handle form submission
+app.post("/api/contact", async (req, res) => {
   const { name, email, message } = req.body;
 
   if (!name || !email || !message) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return res.status(400).json({ message: "❌ All fields are required" });
   }
 
   try {
-    const newContact = new Contact({ name, email, message });
-    await newContact.save();
-    res.status(201).json({ message: 'Message sent successfully!' });
+    // Email content
+    const mailOptions = {
+      from: `"${name}" <${email}>`, // Sender's name and email
+      to: process.env.EMAIL_USER, // Your email where the message will be received
+      subject: `New Contact Form Submission from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "✅ Message sent successfully to your email!" });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to save message', error });
+    console.error("Error sending email:", error);
+    res.status(500).json({ message: "❌ Failed to send email", error });
   }
 });
 
-// Default Route for Testing
-app.get('/', (req, res) => {
-  res.send('API is running...');
-});
-
 // Start Server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
